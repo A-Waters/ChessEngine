@@ -1,0 +1,7 @@
+
+constant = ALL_CAPS
+classes = FirstWord
+varibles = snake_case
+memeber variables = m_varibleName
+memeber functions = functionName()
+types = FirstWord
