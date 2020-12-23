@@ -36,12 +36,7 @@ class ChessBoard {
 	private:
 		//void calculatePoints();
 		std::vector<Move*> getPossibleMoves(Vector2, PoolAllocator<Move>*);
-		std::vector<Move*> getNewJob(std::queue<std::vector<Move*>>& );
-		void PushNewJob(std::queue<std::vector<Move*>>&, std::vector<Move*>&);
 		std::vector<Move*> getAllPossibelMoves(PoolAllocator<Move>*);
 		std::vector<Move*> getAllPossibelMovesForTeam(Teams, PoolAllocator<Move>*);
-		void startMiniMax(int, std::queue<std::vector<Move*>>&, PoolAllocator<Move>&);
-		int getJobsSize(std::queue<std::vector<Move*>>&);
-		
-
+		void startMiniMax(std::queue<std::vector<Move*>>&, PoolAllocator<Move>&);
 };

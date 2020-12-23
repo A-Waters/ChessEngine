@@ -665,19 +665,68 @@ void ChessBoard::drawBoard() {
 
 std::queue<std::vector<Move*>> ChessBoard::setupMiniMax(int goal_depth, PoolAllocator<Move>* m_pools) {
 
+	std::vector<std::thread> threads;
+
+	const int MAX_THREADS = 8; //std::thread::hardware_concurrency()
+
+	std::queue<std::vector<Move*>> distrbiuted_games[MAX_THREADS]; // 8 = std::thread::hardware_concurrency() change if needed
 
 	std::queue<std::vector<Move*>> all_games;
 
 	all_games.push(this->getAllPossibelMovesForTeam(m_current_team, &m_pools[0]));
+
+
+	int current_depth = 0;
+	while (current_depth != goal_depth+1) {
+		std::cout << "CURRENT DEPTH: " << current_depth << std::endl;
+		
+		int current_thread = 0;
+		//catoagrize games
+		while (all_games.size() > 0) {
+			distrbiuted_games[current_thread].push(all_games.front());
+			all_games.pop();
+			current_thread = (current_thread + 1) % MAX_THREADS;
+		}
+
+		//distribute games
+		for (int thread = 0; thread < MAX_THREADS; thread++) {
+			threads.push_back(std::thread(&ChessBoard::startMiniMax, this, std::ref(distrbiuted_games[thread]), std::ref(m_pools[thread])));
+		}
+
+		
+		//moves games back to all games
+		for (int thread = 0; thread < MAX_THREADS; thread++) {
+
+			std::cout << "Joining thread " << threads[thread].get_id() << std::endl;
+			threads[thread].join();
+			while (distrbiuted_games[thread].size() > 0) {
+				all_games.push(distrbiuted_games[thread].front());
+				distrbiuted_games[thread].pop();
+			}
+		}
+	
+
+
+		
+		
+		threads.clear();
+		current_depth++;
+	}
+
+	
+	
+	
+		
 	
 
 
 
-	std::vector<std::thread> threads;
+
 
 	
+	/*
 
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < (int)std::thread::hardware_concurrency(); i++) {
 		std::cout << "Creating thread" << std::endl;
 		threads.push_back(std::thread(&ChessBoard::startMiniMax, this, goal_depth, std::ref(all_games), std::ref(m_pools[i])));
 		
@@ -692,7 +741,7 @@ std::queue<std::vector<Move*>> ChessBoard::setupMiniMax(int goal_depth, PoolAllo
 		
 	}
 	
-
+	*/
 
 
 	//start alogorithm
@@ -722,39 +771,15 @@ void ChessBoard::movePiece(Move* move_to_make) {
 	
 }
 
-std::vector<Move*> ChessBoard::getNewJob(std::queue<std::vector<Move*>>& all_games)
-{
-	std::lock_guard<std::mutex> lock(get_job_mtx);
-	
-
-	std::vector<Move*> moves_to_run = all_games.front();
-
-	while (all_games.size() == 0) {
-		Sleep(1000);
-	}
-	all_games.pop();
-	return moves_to_run;
-}
-
-void ChessBoard::PushNewJob(std::queue<std::vector<Move*>>& all_games, std::vector<Move*> & game_to_add)
-{
-	std::lock_guard<std::mutex> lock(push_job_mtx);
-
-	all_games.push(game_to_add);
-
-}
-
-void ChessBoard::startMiniMax(int goal_depth, std::queue<std::vector<Move*>>& all_games, PoolAllocator<Move>& pool_to_use) {
+void ChessBoard::startMiniMax(std::queue<std::vector<Move*>>& give_games, PoolAllocator<Move>& pool_to_use) {
 	std::cout << "DOING MATH" << std::endl;
 	
+	int games_to_run = give_games.size();
+	int games_ran = 0;
 
-	
-	int size = getJobsSize(all_games);
-	std::vector<Move*> test = all_games.front();
-	Move* thing;
-
-	while (goal_depth != size) {
-		std::vector<Move*> moves_to_run = getNewJob(all_games);
+	while (games_ran != games_to_run) {
+		std::vector<Move*> moves_to_run = give_games.front();
+		give_games.pop();
 
 		//make previous moves
 		ChessBoard current_game = ChessBoard();
@@ -780,24 +805,12 @@ void ChessBoard::startMiniMax(int goal_depth, std::queue<std::vector<Move*>>& al
 			std::vector<Move*> future_moves = future_game.getAllPossibelMovesForTeam(future_game.m_current_team, &pool_to_use);
 
 			//push games 
-			PushNewJob(all_games, future_moves);
+			give_games.push(future_moves);
 
-
-
-			
 		}
 
-		size = getJobsSize(all_games);
+		games_ran++;
 		
 	}
 	
-}
-
-
-int ChessBoard::getJobsSize(std::queue<std::vector<Move*>>& all_jobs) {
-	std::lock_guard<std::mutex> lock(get_job_mtx);
-	while (all_jobs.size() == 0) {
-		Sleep(1000);
-	}
-	return all_jobs.front().at(0)->getAllPreviousMoves().size();
 }
