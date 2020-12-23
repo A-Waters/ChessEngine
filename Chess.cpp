@@ -12,20 +12,18 @@ int main()
 {
     std::cout << std::thread::hardware_concurrency() << std::endl;
     
+    PoolAllocator<Move> m_pools[8];
 
-    PoolAllocator<Move> Pool;
-    ChessBoard newGame = ChessBoard(&Pool);
+    
+    
+    ChessBoard newGame = ChessBoard();
 
     newGame.standardStart();
     ChessBoard copy_game = newGame;
     
-
     
-    //int location[2] = { 1, 0 };
-    //std::vector<Move> moves = newGame.getAllPossibelMoves();
-    
-    int turns = 1;
-    std::queue<std::vector<Move*>> moves = newGame.fakeMiniMax(turns);
+    int turns = 5;
+    std::queue<std::vector<Move*>> moves = newGame.setupMiniMax(turns, m_pools);
 
 
     std::cout << "GameStates:" << moves.size() << std::endl;

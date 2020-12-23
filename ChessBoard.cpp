@@ -1,7 +1,6 @@
 #include "ChessBoard.h"
 
-ChessBoard::ChessBoard(PoolAllocator<Move>* incoming_pool) {
-	this->pool = incoming_pool;
+ChessBoard::ChessBoard() {
 
 	for (int x = 0; x < 8; x++) {
 		for (int y = 0; y < 8; y++) {
@@ -9,6 +8,7 @@ ChessBoard::ChessBoard(PoolAllocator<Move>* incoming_pool) {
 			this->m_board[x][y] = ChessPiece(NONE, NEUTRAL, location, true);
 		}
 	}
+	
 
 	this->m_points[0] = 0.0f;
 	this->m_points[1] = 0.0f;
@@ -21,7 +21,6 @@ ChessBoard::ChessBoard(PoolAllocator<Move>* incoming_pool) {
 };
 
 ChessBoard::ChessBoard(const ChessBoard& other) {
-	this->pool = other.pool;
 
 	
 	for (int x = 0; x < 8; x++) {
@@ -39,6 +38,8 @@ ChessBoard::ChessBoard(const ChessBoard& other) {
 
 
 }
+
+ChessBoard::~ChessBoard() {}
 
 void ChessBoard::standardStart() {
 	
@@ -118,7 +119,7 @@ void ChessBoard::CustomStart() {
 	this->m_board[4][3] = ChessPiece(PAWN, BLACK, { (signed char)4,(signed char)4 }, false);
 }
 
-std::vector<Move*> ChessBoard::getPossibleMoves(Vector2 location) {
+std::vector<Move*> ChessBoard::getPossibleMoves(Vector2 location, PoolAllocator<Move>* pool) {
 
 	std::vector<Move*> possible_moves = {};
 
@@ -599,7 +600,7 @@ std::vector<Move*> ChessBoard::getPossibleMoves(Vector2 location) {
 	return possible_moves;
 }
 
-std::vector<Move*> ChessBoard::getAllPossibelMoves() {
+std::vector<Move*> ChessBoard::getAllPossibelMoves(PoolAllocator<Move>* pool) {
 
 	std::vector<Move*> all_moves;
 
@@ -607,7 +608,7 @@ std::vector<Move*> ChessBoard::getAllPossibelMoves() {
 		for (int y = 0; y < 8; y++) {
 
 			Vector2 piece_location = { signed char(x), signed char(y) };
-			std::vector<Move*> piece_moves = getPossibleMoves(piece_location);
+			std::vector<Move*> piece_moves = getPossibleMoves(piece_location, pool);
 			all_moves.insert(all_moves.end(), piece_moves.begin(), piece_moves.end());
 
 
@@ -618,7 +619,7 @@ std::vector<Move*> ChessBoard::getAllPossibelMoves() {
 	return all_moves;
 }
 
-std::vector<Move*> ChessBoard::getAllPossibelMovesForTeam(Teams color) {
+std::vector<Move*> ChessBoard::getAllPossibelMovesForTeam(Teams color, PoolAllocator<Move>* pool) {
 
 	std::vector<Move*> all_moves;
 
@@ -626,7 +627,7 @@ std::vector<Move*> ChessBoard::getAllPossibelMovesForTeam(Teams color) {
 		for (int y = 0; y < 8; y++) {
 			if (this->m_board[x][y].getTeam() == color) {
 				Vector2 piece_location = { signed char(x), signed char(y) };
-				std::vector<Move*> piece_moves = getPossibleMoves(piece_location);
+				std::vector<Move*> piece_moves = getPossibleMoves(piece_location, pool);
 				all_moves.insert(all_moves.end(), piece_moves.begin(), piece_moves.end());
 			}
 		}
@@ -662,48 +663,43 @@ void ChessBoard::drawBoard() {
 	std::cout << this->m_board[0][1].getType() << std::endl;
 }
 
-std::queue<std::vector<Move*>> ChessBoard::fakeMiniMax(int goal_depth) {
+std::queue<std::vector<Move*>> ChessBoard::setupMiniMax(int goal_depth, PoolAllocator<Move>* m_pools) {
+
 
 	std::queue<std::vector<Move*>> all_games;
 
-	all_games.push(this->getAllPossibelMovesForTeam(m_current_team));
+	all_games.push(this->getAllPossibelMovesForTeam(m_current_team, &m_pools[0]));
+	
 
-	while (goal_depth != all_games.front().at(0)->getAllPreviousMoves().size()) {
-		std::vector<Move*> moves_to_run = all_games.front();
-		all_games.pop();
 
+
+	std::vector<std::thread> threads;
+
+	
+
+	for (int i = 0; i < 7; i++) {
+		std::cout << "Creating thread" << std::endl;
+		threads.push_back(std::thread(&ChessBoard::startMiniMax, this, goal_depth, std::ref(all_games), std::ref(m_pools[i])));
 		
-		
-		//make previous moves
-		ChessBoard current_game = ChessBoard(pool);
-		current_game.standardStart();
-
-		std::vector<Move*> previous_moves = moves_to_run.at(0)->getAllPreviousMoves();
-
-		for (Move* prev_move : previous_moves) {
-			current_game.movePiece(prev_move);
-		}
-
-		//for (Move* move_to_make : moves_to_run) {
-		for (int i = 0; i < moves_to_run.size(); i++){
-			Move* move_to_make = moves_to_run[i];
-			
-			//create starting position
-			ChessBoard future_game = current_game;
-
-			// move piece
-			future_game.movePiece(move_to_make);
-
-			//get all possible moves from future game
-			std::vector<Move*> future_moves = future_game.getAllPossibelMovesForTeam(future_game.m_current_team);
-
-			//push games 
-			all_games.push(future_moves);
-		}
-
 	}
+	
+	
+
+
+	for (std::thread &th : threads) {
+		std::cout << "Joining thread " << th.get_id() << std::endl;
+		th.join(); 
+		
+	}
+	
+
+
+
+	//start alogorithm
+
 
 	return all_games;
+	
 
 }
 
@@ -724,4 +720,84 @@ void ChessBoard::movePiece(Move* move_to_make) {
 
 	this->m_last_move = move_to_make;
 	
+}
+
+std::vector<Move*> ChessBoard::getNewJob(std::queue<std::vector<Move*>>& all_games)
+{
+	std::lock_guard<std::mutex> lock(get_job_mtx);
+	
+
+	std::vector<Move*> moves_to_run = all_games.front();
+
+	while (all_games.size() == 0) {
+		Sleep(1000);
+	}
+	all_games.pop();
+	return moves_to_run;
+}
+
+void ChessBoard::PushNewJob(std::queue<std::vector<Move*>>& all_games, std::vector<Move*> & game_to_add)
+{
+	std::lock_guard<std::mutex> lock(push_job_mtx);
+
+	all_games.push(game_to_add);
+
+}
+
+void ChessBoard::startMiniMax(int goal_depth, std::queue<std::vector<Move*>>& all_games, PoolAllocator<Move>& pool_to_use) {
+	std::cout << "DOING MATH" << std::endl;
+	
+
+	
+	int size = getJobsSize(all_games);
+	std::vector<Move*> test = all_games.front();
+	Move* thing;
+
+	while (goal_depth != size) {
+		std::vector<Move*> moves_to_run = getNewJob(all_games);
+
+		//make previous moves
+		ChessBoard current_game = ChessBoard();
+		current_game.standardStart();
+
+		std::vector<Move*> previous_moves = moves_to_run[0]->getAllPreviousMoves();
+		
+		for (Move* prev_move : previous_moves) {
+			current_game.movePiece(prev_move);
+		}
+		
+		//for (Move* move_to_make : moves_to_run) {
+		for (int i = 0; i < moves_to_run.size(); i++) {
+			Move* move_to_make = moves_to_run[i];
+
+			//create starting position
+			ChessBoard future_game = current_game;
+
+			// move piece
+			future_game.movePiece(move_to_make);
+
+			//get all possible moves from future game
+			std::vector<Move*> future_moves = future_game.getAllPossibelMovesForTeam(future_game.m_current_team, &pool_to_use);
+
+			//push games 
+			PushNewJob(all_games, future_moves);
+
+
+
+			
+		}
+
+		size = getJobsSize(all_games);
+		
+	}
+	
+}
+
+
+int ChessBoard::getJobsSize(std::queue<std::vector<Move*>>& all_jobs) {
+	std::lock_guard<std::mutex> lock(get_job_mtx);
+	while (all_jobs.size() == 0) {
+		Sleep(1000);
+	}
+	return all_jobs.front().at(0)->getAllPreviousMoves().size();
 }

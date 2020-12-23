@@ -18,10 +18,22 @@ class PoolAllocator
 
 
 	public:
-		PoolAllocator(size_t chunnksize = 340) : m_chunkSize(chunnksize) {};
+		PoolAllocator(size_t chunnksize = 340) : m_chunkSize(chunnksize) {
+		};
+
+		PoolAllocator(const PoolAllocator& other) {
+			this->m_chunks = other.m_chunks;
+			this->m_insertPoint = other.m_insertPoint;
+			this->m_endPoint = other.m_endPoint;
+			this->m_chunkSize = other.m_chunkSize;
+		}
+
 		~PoolAllocator() {
 			clear();
 		}
+
+
+
 
 		T* alloc() {
 			if (m_insertPoint >= m_endPoint) {
@@ -53,6 +65,10 @@ class PoolAllocator
 			m_chunks.clear();
 
 		}
+
+
+
+		
 
 };
 

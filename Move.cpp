@@ -23,7 +23,7 @@ Move::Move() {
 }
 
 Move::~Move() {
-	int i = 0;
+	this->m_old_pos.x = 0;
 }
 
 std::vector<Move*> Move::getAllPreviousMoves(){
