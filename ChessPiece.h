@@ -4,7 +4,6 @@
 #include "Move.h"
 #include "Vector2.h"
 
-class ChessBoard;
 
 class ChessPiece 
 {
@@ -12,6 +11,7 @@ class ChessPiece
 	Vector2 m_location;
 	Teams m_color;
 	bool m_firstMove;
+	int m_value; 
 
 	public:
 		ChessPiece();
@@ -24,7 +24,6 @@ class ChessPiece
 		bool getFirstMove() { return  m_firstMove; };
 
 		void setFirstMove(bool value) { m_firstMove = value; };
-		
 
 };
 

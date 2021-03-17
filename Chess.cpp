@@ -22,7 +22,7 @@ int main()
     ChessBoard copy_game = newGame;
     
     
-    int turns = 4;
+    int turns = 1;
     std::queue<std::vector<Move*>> moves = newGame.setupMiniMax(turns, m_pools);
 
 

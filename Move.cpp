@@ -3,6 +3,7 @@
 Move::Move(Vector2 old_pos, Vector2 new_pos, Move* mother) {
 	m_motherMove = mother;
 
+
 	this->m_old_pos.x = old_pos.x;
 	this->m_old_pos.y = old_pos.y;
 

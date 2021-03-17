@@ -568,8 +568,6 @@ std::vector<Move*> ChessBoard::getPossibleMoves(Vector2 location, PoolAllocator<
 
 		break;
 
-		//king movement is in the next section , roll over
-
 
 	case KING:
 		possible_moves.reserve(8);
@@ -590,6 +588,24 @@ std::vector<Move*> ChessBoard::getPossibleMoves(Vector2 location, PoolAllocator<
 				}
 			}
 		}
+
+
+
+		//casteling
+		if (current_piece.getFirstMove()) {
+			if (this->m_board[0][location.y].getType() == ROOK) {
+				if (this->m_board[0][location.y].getFirstMove()) {
+					
+
+					//check if other people are not in the way
+
+
+				}
+			}
+
+
+		}
+
 
 		break;
 
@@ -769,6 +785,8 @@ void ChessBoard::movePiece(Move* move_to_make) {
 
 	this->m_last_move = move_to_make;
 	
+	//check if king in check
+
 }
 
 void ChessBoard::startMiniMax(std::queue<std::vector<Move*>>& give_games, PoolAllocator<Move>& pool_to_use) {
@@ -813,4 +831,8 @@ void ChessBoard::startMiniMax(std::queue<std::vector<Move*>>& give_games, PoolAl
 		
 	}
 	
+}
+
+float ChessBoard::calculatePoints() {
+	return 0.0;
 }

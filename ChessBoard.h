@@ -34,7 +34,7 @@ class ChessBoard {
 		void movePiece(Move*);
 	
 	private:
-		//void calculatePoints();
+		float calculatePoints();
 		std::vector<Move*> getPossibleMoves(Vector2, PoolAllocator<Move>*);
 		std::vector<Move*> getAllPossibelMoves(PoolAllocator<Move>*);
 		std::vector<Move*> getAllPossibelMovesForTeam(Teams, PoolAllocator<Move>*);
